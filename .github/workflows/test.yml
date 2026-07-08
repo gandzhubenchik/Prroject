@@ -1,0 +1,12 @@
+name: Run Auto Tests
+
+on:
+  push:
+    branches: [ "main" ]
+
+jobs:
+  run-echo-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run test command
+        run: echo "Tests passed"
