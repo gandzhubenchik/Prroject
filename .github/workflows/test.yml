@@ -3,6 +3,7 @@ name: Run Auto Tests
 on:
   push:
     branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
   run-echo-test:
