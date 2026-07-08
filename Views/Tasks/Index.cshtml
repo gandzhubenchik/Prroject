@@ -1,0 +1,200 @@
+﻿@model TasksController.TaskFilterViewModel
+@if (TempData["Error"] != null)
+{
+        <div class="alert alert-danger alert-dismissible fade show shadow-sm" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismissly="alert" aria-label="Close"></button>
+        </div>
+}
+
+<h2 class="mb-4">Обзорная доска задач</h2>
+<div class="mb-4 bg-light p-3 rounded shadow-sm">
+    <div class="d-flex justify-content-between align-items-center mb-1">
+        <span class="fw-bold text-secondary">
+            @if (User.IsInRole("Admin"))
+            {
+                <text>Общий прогресс выполнения всех задач системы:</text>
+            }
+            else
+            {
+                <text>Ваш личный прогресс по задачам:</text>
+            }
+        </span>
+        <span class="badge bg-success fs-6">@ViewBag.CompletionPercentage%</span>
+    </div>
+
+    <!-- Компонент Progress Bar из Bootstrap -->
+    <div class="progress" style="height: 25px;">
+        <div class="progress-bar progress-bar-striped progress-bar-animated bg-success" 
+             role="progressbar" 
+             style="width: @ViewBag.CompletionPercentage%;" 
+             aria-valuenow="@ViewBag.CompletionPercentage" 
+             aria-valuemin="0" 
+             aria-valuemax="100">
+            @if (ViewBag.CompletionPercentage > 5)
+            {
+                     <span class="fw-bold">@ViewBag.CompletionPercentage% Выполнено</span>
+            }
+        </div>
+    </div>
+</div>
+
+@if (User.IsInRole("Admin"))
+{
+        <div class="row mb-4">
+            <div class="col-md-3">
+                <div class="card bg-primary text-white h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6>Всего задач</h6>
+                        <h2 class="display-6 fw-bold">@Model.Tasks.Count</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-warning text-dark h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6>Ожидают одобрения</h6>
+                        <h2 class="display-6 fw-bold">@Model.Tasks.Count(t => t.Status == "Requested")</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-success text-white h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6>Завершено</h6>
+                        <h2 class="display-6 fw-bold">@Model.Tasks.Count(t => t.Status == "Completed")</h2>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="card bg-danger text-white h-100 shadow-sm">
+                    <div class="card-body text-center">
+                        <h6>Просрочено</h6>
+                        <h2 class="display-6 fw-bold">@Model.Tasks.Count(t => t.Status != "Completed" && t.DueDate.Date < DateTime.Today)</h2>
+                    </div>
+                </div>
+            </div>
+        </div>
+}
+
+@if (User.IsInRole("Admin"))
+{
+        <!-- Панель фильтрации для Администратора -->
+        <form method="get" class="row g-3 mb-4 bg-light p-3 rounded">
+            <div class="col-md-4">
+                <label class="form-label">Исполнитель</label>
+            @Html.DropDownList("userId", Model.UsersList, "Все сотрудники", new { @class = "form-select" })
+            </div>
+            <div class="col-md-4">
+                <label class="form-label">Статус</label>
+                <select name="status" class="form-select">
+                    <option value="">Все статусы</option>
+                    <option value="New">Новая</option>
+                    <option value="InProgress">В работе</option>
+                    <option value="Requested">Заявка</option>
+                    <option value="Completed">Завершена</option>
+                </select>
+            </div>
+            <div class="col-md-4 d-flex align-items-end">
+                <button type="submit" class="btn btn-primary w-100">Применить фильтры</button>
+            </div>
+        </form>
+        <a asp-action="Create" class="btn btn-success mb-3">Создать задачу</a>
+}
+
+<table class="table table-bordered align-middle">
+    <thead class="table-dark">
+        <tr>
+            <th>Название</th>
+            <th>Приоритет</th>
+            <th>Статус</th>
+            <th>Срок выполнения</th>
+            <th>Исполнитель</th>
+            <th>Действия</th>
+        </tr>
+    </thead>
+    <tbody>
+        @foreach (var item in Model.Tasks)
+        {
+                <!-- Использование кастомного хелпера для выделения строки -->
+                <tr class="@Html.RowHighlight(item.DueDate, item.Status)">
+                    <td>
+                        <strong>@item.Title</strong><br />
+                        <small class="text-muted">@item.Description</small>
+                    </td>
+                    <td>
+                        <!-- Использование кастомного хелпера для приоритета -->
+                    @Html.PriorityBadge(item.Priority)
+                    </td>
+                    <td>@item.Status</td>
+                    <td>@item.DueDate.ToShortDateString()</td>
+                    <td>@(item.User?.Username ?? "Не назначен")</td>
+                            <td>
+                    @if (User.IsInRole("Employee"))
+                    {
+                        // 1. Взять задачу
+                        if (item.Status == "New" && item.UserId == null)
+                        {
+                        <form asp-action="ClaimTask" asp-route-id="@item.Id" method="post" class="d-inline">
+                            <button type="submit" class="btn btn-sm btn-info text-white">Взять задачу (Заявка)</button>
+                        </form>
+                        }
+                        // 2. Сдать задачу (с возможностью прикрепить файл)
+                        if (item.Status == "InProgress" && item.User?.Username == User.Identity?.Name)
+                        {
+                            if (item.DueDate.Date < DateTime.Today)
+                            {
+                        <!-- Если просрочена: вместо формы показываем предупреждение -->
+                        <div class="alert alert-danger p-2 m-0 small text-center">
+                            <i class="bi bi-clock-history"></i> Срок упущен! Обратитесь к администратору.
+                        </div>
+                            }
+                            else
+                            {
+                        <!-- Если всё в порядке: показываем стандартную форму сдачи -->
+                        <form asp-action="UpdateStatus" method="post" enctype="multipart/form-data" class="bg-light p-2 rounded border">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="newStatus" value="Completed" />
+
+                            <div class="mb-2">
+                                <label class="form-label small fw-bold">Прикрепить результат:</label>
+                                <input type="file" name="uploadedFile" class="form-control form-control-sm" required />
+                            </div>
+                            <button type="submit" class="btn btn-sm btn-success w-100">Сдать задачу</button>
+                        </form>
+                            }
+                        }
+
+                    }
+
+                    @if (User.IsInRole("Admin"))
+                    {
+                        // 1. Одобрить заявку сотрудника
+                        if (item.Status == "Requested")
+                        {
+                        <form asp-action="UpdateStatus" method="post" class="d-inline">
+                            <input type="hidden" name="id" value="@item.Id" />
+                            <input type="hidden" name="newStatus" value="InProgress" />
+                            <button type="submit" class="btn btn-sm btn-warning">Одобрить заявку</button>
+                        </form>
+                        }
+
+                        // 2. Получить файлы выполненной задачи
+                        if (!string.IsNullOrEmpty(item.AttachedFilePath))
+                        {
+                        <a asp-action="DownloadFile" asp-route-fileName="@item.AttachedFilePath" class="btn btn-sm btn-outline-primary">
+                            📥 Скачать результат
+                        </a>
+                        }
+                        else if (item.Status == "Completed")
+                        {
+                        <span class="text-muted small">Без файла</span>
+                        }
+                    }
+    </td>
+
+
+                </tr>
+        }
+    </tbody>
+</table>

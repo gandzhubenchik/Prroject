@@ -1,0 +1,78 @@
+﻿@model TodoTask
+
+@{
+    ViewData["Title"] = "Создать новую задачу";
+}
+
+<div class="row justify-content-center mt-4">
+    <div class="col-md-6">
+        <div class="card shadow">
+            <div class="card-header bg-success text-white">
+                <h4 class="mb-0">Новая задача</h4>
+            </div>
+            <div class="card-body">
+                <form asp-action="Create" method="post">
+                    @Html.AntiForgeryToken()
+
+                    <!-- Название задачи -->
+                    <div class="mb-3">
+                        <label asp-for="Title" class="form-label">Название задачи</label>
+                        <input asp-for="Title" class="form-control" placeholder="Введите название..." />
+                        <span asp-validation-for="Title" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Описание задачи -->
+                    <div class="mb-3">
+                        <label asp-for="Description" class="form-label">Описание</label>
+                        <textarea asp-for="Description" class="form-control" rows="3" placeholder="Детали задачи..."></textarea>
+                        <span asp-validation-for="Description" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row">
+                        <!-- Приоритет через DropDownList -->
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="Priority" class="form-label">Приоритет</label>
+                            <select asp-for="Priority" class="form-select">
+                                <option value="Low">Низкий</option>
+                                <option value="Medium">Средний</option>
+                                <option value="High">Высокий</option>
+                            </select>
+                            <span asp-validation-for="Priority" class="text-danger small"></span>
+                        </div>
+
+                        <!-- Срок выполнения -->
+                        <div class="col-md-6 mb-3">
+                            <label asp-for="DueDate" class="form-label">Срок выполнения</label>
+                            <input asp-for="DueDate" type="date" class="form-control" value="@DateTime.Today.ToString("yyyy-MM-dd")" />
+                            <span asp-validation-for="DueDate" class="text-danger small"></span>
+                        </div>
+                    </div>
+                    <!-- Выбор проекта через DropDownList -->
+<div class="mb-3">
+    <label asp-for="ProjectId" class="form-label">Проект</label>
+                        @Html.DropDownList("ProjectId", (SelectList)ViewBag.Projects, "Выберите проект...", new { @class = "form-select" })
+    <span asp-validation-for="ProjectId" class="text-danger small"></span>
+</div>
+
+                    <!-- Исполнитель через DropDownList, переданный из ViewBag -->
+                    <div class="mb-3">
+                        <label asp-for="UserId" class="form-label">Назначить исполнителя</label>
+                        @Html.DropDownList("UserId", (SelectList)ViewBag.Users, "Оставить без исполнителя (для заявок)", new { @class = "form-select" })
+                        <span asp-validation-for="UserId" class="text-danger small"></span>
+                    </div>
+
+                    <!-- Кнопки управления -->
+                    <div class="d-flex justify-content-between pt-2">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Назад к доске</a>
+                        <button type="submit" class="btn btn-success">Создать и назначить</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+        <!-- Подключение клиентской валидации, чтобы кастомная дата и Required срабатывали без перезагрузки -->
+        <partial name="_ValidationScriptsPartial" />
+}
